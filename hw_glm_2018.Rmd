@@ -2,7 +2,7 @@
 title: "Homework 04"
 subtitle: "Generalized Linear Models"
 author: "Name"
-date: "October 5, 2017"
+date: "October 2, 2018"
 output:
   pdf_document: default
 ---
@@ -26,17 +26,46 @@ risky_behaviors<-read.dta("http://www.stat.columbia.edu/~gelman/arm/examples/ris
 1. Model this outcome as a function of treatment assignment using a Poisson regression. Does the model fit well? Is there evidence of overdispersion?
 
 ```{r}
-a
+# First round fupacts.
+risky_behaviors$fupacts <- round(risky_behaviors$fupacts)
+#We fit the model with constant term alone.
+fit1 <- glm(fupacts ~ 1 ,data = risky_behaviors,family = poisson)
+summary(fit1)
+#We fit the model by adding two indicators. 
+fit2 <- glm(fupacts ~ factor(women_alone)+factor(couples),data = risky_behaviors,family = poisson)
+summary(fit2)
+"The fit looks better than null since the residual deviance reduced 374 from 13299 to 12925 "
+
+#Check for overdispersion.
+n1 <- nrow(risky_behaviors)
+k1 <- length(fit2$coef)
+yhat1 <- predict (fit2, type="response") 
+z1 <- (risky_behaviors$fupacts-yhat1)/sqrt(yhat1)
+cat ("overdispersion ratio is ", sum(z1^2)/(n1-k1), "\n")
+cat ("p-value of overdispersion test is ", pchisq (sum(z1^2), n1-k1), "\n")
+"In summary, the risky behavior data are overdispersed by a factor of 44.13, which is huge"
 ```
 
 2. Next extend the model to include pre-treatment measures of the outcome and the additional pre-treatment variables included in the dataset. Does the model fit well? Is there evidence of overdispersion?
 ```{r}
-
+Risks <- risky_behaviors[risky_behaviors$bupacts >0, ]
+fit3 <- glm(round(fupacts) ~ factor(women_alone)+factor(couples)+ factor(sex) + factor(bs_hiv),offset = log(bupacts),data = Risks,family = poisson)
+summary(fit3)
+"This fit is better than previous model"
+n2 <- nrow(Risks)
+k2 <- length(fit3$coef)
+yhat2 <- predict (fit3, type="response") 
+z2 <- (Risks$fupacts-yhat2)/sqrt(yhat2)
+cat ("overdispersion ratio is ", sum(z2^2)/(n2-k2), "\n")
+cat ("p-value of overdispersion test is ", pchisq (sum(z2^2), n2-k2), "\n")
+"There still is overdispersed by a factor of 46.31"
 ```
 
 3. Fit an overdispersed Poisson model. What do you conclude regarding effectiveness of the intervention?
 ```{r}
-
+fit4 <- glm(round(fupacts) ~ factor(women_alone)+factor(couples)+ factor(sex) + factor(bs_hiv),offset = log(bupacts),data = Risks,family = quasipoisson)
+summary(fit4)
+"The model seems to suggest that the group in which just the woman participated is effective compared to control."
 ```
 
 4. These data include responses from both men and women from the participating couples. Does this give you any concern with regard to our modeling assumptions?
@@ -159,6 +188,9 @@ data(ships)
 Develop a model for the rate of incidents, describing the effect of the important predictors.
 
 ```{r}
+ships_poisson <- glm(incidents ~ ., family=poisson, data=ships)
+summary(ships_poisson)
+
 ```
 
 # Australian Health Survey 
@@ -173,14 +205,17 @@ data(dvisits)
 1.  Build a Poisson regression model with `doctorco` as the response and `sex`, `age`, `agesq`, `income`, `levyplus`, `freepoor`, `freerepa`, `illness`, `actdays`, `hscore`, `chcond1` and `chcond2` as possible predictor variables. Considering the deviance of this model, does this model fit the data?
 
 ```{r}
-
+doctor_poisson <- glm(doctorco ~ sex + age + agesq + income + levyplus + freepoor + freerepa + illness + actdays + hscore + chcond1 + chcond2, family=poisson, data = dvisits)
+summary(doctor_poisson)
 ```
+
 
 2. Plot the residuals and the fitted values-why are there lines of observations on the
 plot?
 
 ```{r}
-
+par(mfrow=c(2,2))
+plot(doctor_poisson)
 ```
 
 3. What sort of person would be predicted to visit the doctor the most under your
@@ -194,7 +229,8 @@ selected model?
 their visits to the doctor, i.e., give the probability they visit 0,1,2, etc. times. 
 
 ```{r}
-
+predict(doctor_poisson, dvisits[5190,], type="response")
+print(paste0("Probability of 0 doctor's visits: ", dpois(0, lambda = 0.153)))
 ```
 
 5. Fit a comparable (Gaussian) linear model and graphically compare the fits.  Describe how they differ.
