@@ -70,13 +70,36 @@ summary(fit4)
 
 4. These data include responses from both men and women from the participating couples. Does this give you any concern with regard to our modeling assumptions?
 ```{r}
+"Including men and women in the model is not consistent with the second treatment that only woman are allowed."
 ```
 
 # Comparing logit and probit: 
 Take one of the data examples from Chapter 5. Fit these data using both logit and probit model. Check that the results are essentially the same (after scaling by factor of 1.6)
+```{r}
+wells = read.table("http://www.stat.columbia.edu/~gelman/arm/examples/arsenic/wells.dat")
+wells$log.arsenic = log(wells$arsenic)
+#summary(wells)
+logit = glm(switch ~ log(arsenic) + dist + educ, family=binomial(link="logit"), data=wells)
+display(logit)
+
+probit = glm(switch ~ log(arsenic) + dist + educ, family=binomial(link="probit"), data=wells)
+display(probit)
+
+"The coefficient of probit model are essentially the same after scaling by factor of 1.6"
+```
+
 
 # Comparing logit and probit: 
 construct a dataset where the logit and probit mod- els give different estimates.
+```{r}
+arsenic = runif(10,0.51,9.65)
+dist = runif(10,0.387,339.53)
+educ = sample(0:17,10,replace = T)
+
+predict_data = data.frame(arsenic,dist,educ)
+predict(logit,predict_data)
+predict(probit,predict_data)
+```
 
 # Tobit model for mixed discrete/continuous data: 
 experimental data from the National Supported Work example are available in the folder `lalonde`. Use the treatment indicator and pre-treatment variables to predict post-treatment (1978) earnings using a tobit model. Interpret the model coefficients.
@@ -102,7 +125,7 @@ The csv file `congress` has the votes for the Democratic and Republican candidat
 For your analysis, just use the elections in 1986 and 1988 that were contested by both parties in both years.
 
 ```{r, echo=FALSE}
-congress<-read.csv("congress.csv",header=TRUE)
+#congress<-read.csv("congress.csv",header=TRUE)
 ```
 
 1. Fit a linear regression (with the usual normal-distribution model for the errors) predicting 1988 Democratic vote share from the other variables and assess model fit.
@@ -143,37 +166,47 @@ data(salmonella)
 
 When you plot the data you see that the number of colonies as a function of dose is not monotonic especially around the dose of 1000.
 ```{r}
+ggplot(data = salmonella) + geom_point(aes(x = dose, y=colonies))
+
 ```
 
 Since we are fitting log linear model we should look at the data on log scale.  Also becase the dose is not equally spaced on the raw scale it may be better to plot it on the log scale as well.
 ```{r}
+ggplot(data = salmonella) + geom_point(aes(x = log(dose), y=log(colonies)))
+
 ```
 
 This shows that the trend is not monotonic.  Hence when you fit the model and look at the residual you will see a trend.
 ```{r}
+salmonella_fit = glm(colonies ~ dose,data = salmonella,family=poisson(link="log"))
+summary(salmonella_fit)
+plot(salmonella_fit,which = 1)
 
 ```
 
 The lack of fit is also evident if we plot the fitted line onto the data.
 ```{r}
-
+plot(colonies ~ dose, data = salmonella)
+lines(salmonella$dose,predict.glm(salmonella_fit,type="response"))
 ```
 
 How do we adress this problem?  The serious problem to address is the nonlinear trend of dose ranther than the overdispersion since the line is missing the points.  Let's add a beny line with 4th order polynomial.
 
 ```{r}
-
+salmonella_fit2 = glm(colonies ~ poly(dose,4),data=salmonella,family=poisson(link="log"))
+sumary(salmonella_fit2)
 ``` 
 
 The resulting residual looks nice and if you plot it on the raw data.  Whether the trend makes real contextual sense will need to be validated but for the given data it looks feasible.
 
 ```{r}
-
+plot(salmonella_fit2,which=1)
 ```
 
 Dispite the fit, the overdispersion still exists so we'd be better off using the quasi Poisson model.
 ```{r}
-
+salmonella_fit3 = glm(colonies ~ poly(dose,4),data = salmonella,family=quasipoisson(link="log"))
+summary(salmonella_fit3)
 ```
 
 
@@ -188,9 +221,17 @@ data(ships)
 Develop a model for the rate of incidents, describing the effect of the important predictors.
 
 ```{r}
-ships_poisson <- glm(incidents ~ ., family=poisson, data=ships)
-summary(ships_poisson)
+fit_ship<- glm(incidents ~ ., family=poisson, data=ships)
+summary(fit_ship)
 
+"in this fitted mode, the only predictor that not significant is type E."
+"The constant term gives the intercept of the regression, that means the incident is -5.706e+00 when the prediction of other predictor is 0."
+"The expected multiplicative increase of incidents is e^8.135e-01 difference of having a typeB" 
+"The expected multiplicative increase of incidents is e^-1.205 difference of having a typeC"
+"The expected multiplicative increase of incidents is e^-8.595e-01 difference of having a typeD"
+"The expected multiplicative increase of incidents is e^4.519e-02 difference of per year different"
+"The expected multiplicative increase of incidents is e^6.055e-02 difference per period different"
+"The expected multiplicative increase of incidents is e^5.970e-05 difference of per service change"
 ```
 
 # Australian Health Survey 
@@ -205,8 +246,9 @@ data(dvisits)
 1.  Build a Poisson regression model with `doctorco` as the response and `sex`, `age`, `agesq`, `income`, `levyplus`, `freepoor`, `freerepa`, `illness`, `actdays`, `hscore`, `chcond1` and `chcond2` as possible predictor variables. Considering the deviance of this model, does this model fit the data?
 
 ```{r}
-doctor_poisson <- glm(doctorco ~ sex + age + agesq + income + levyplus + freepoor + freerepa + illness + actdays + hscore + chcond1 + chcond2, family=poisson, data = dvisits)
-summary(doctor_poisson)
+doctor_fit <- glm(doctorco ~ sex + age + agesq + income + levyplus + freepoor + freerepa + illness + actdays + hscore + chcond1 + chcond2, family=poisson, data = dvisits)
+summary(doctor_fit)
+"Since the residual deviance and AIC are quite high, so it may not the best fit"
 ```
 
 
@@ -215,26 +257,34 @@ plot?
 
 ```{r}
 par(mfrow=c(2,2))
-plot(doctor_poisson)
+plot(doctor_fit)
+"There are lines because the responses are discrete continuous value"
 ```
 
 3. What sort of person would be predicted to visit the doctor the most under your
 selected model?
 
 ```{r}
-
+"Predictors of age, income, hscore, actdays, and illness are significant, so it may the sort of person to visit the doctor most."
 ```
 
 4. For the last person in the dataset, compute the predicted probability distribution for
 their visits to the doctor, i.e., give the probability they visit 0,1,2, etc. times. 
 
 ```{r}
-predict(doctor_poisson, dvisits[5190,], type="response")
+predict(doctor_fit, dvisits[5190,], type="response")
 print(paste0("Probability of 0 doctor's visits: ", dpois(0, lambda = 0.153)))
+print(paste0("Probability of 1 doctor's visits: ", dpois(1, lambda = 0.153)))
+
+print(paste0("Probability of 2 doctor's visits: ", dpois(2, lambda = 0.153)))
+print(paste0("Probability of 3 doctor's visits: ", dpois(3, lambda = 0.153)))
 ```
 
 5. Fit a comparable (Gaussian) linear model and graphically compare the fits.  Describe how they differ.
 
 ```{r}
-
+doctor_fit2<- lm(doctorco ~ sex + age + agesq + income + levyplus + freepoor + freerepa + illness + actdays + hscore + chcond1 + chcond2, data=dvisits)
+summary(doctor_fit2)
+predict(doctor_fit2, dvisits[5190,])
+"It appears that it isn't likely to be too different"
 ```
