@@ -1,7 +1,7 @@
 ---
 title: "Homework 04"
 subtitle: "Generalized Linear Models"
-author: "Name"
+author: "Kaiyu Yan"
 date: "October 2, 2018"
 output:
   pdf_document: default
